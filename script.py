@@ -129,6 +129,7 @@ class PizzaSlicing:
                 leftResult = self.goLeft(False)
                 if leftResult == "Valid":
                     continue
+
                 rightResult = self.goRight(False)
                 if rightResult == "Valid":
                     continue
@@ -262,8 +263,13 @@ fileNames = ['a', 'b', 'c', 'd']
 objects = []
 
 debug = False
-
 directions = ['down', 'right']
+
+# Inverto righe e colonne in fase di lettura e di scrittura
+# basta implementare l'algoritmo nelle direzioni right e down e flippare quando servono top e left per avere
+# tutte le direzioni
+flipRows = True
+flipColumns = True
 
 for fileName in fileNames:
     print("--- START FILE {} ---".format(fileName))
@@ -281,7 +287,14 @@ for fileName in fileNames:
     # INPUT PARSER
     pizza = []
     for line in inFile.readlines():
-        pizza.append(list(line.strip()))
+        newRow = list(line.strip())
+        if flipColumns:
+            newRow = newRow[::-1]
+
+        if flipRows:
+            pizza.insert(0, newRow)
+        else:
+            pizza.append(newRow)
 
     ps = PizzaSlicing(pizza, R, C, L, H)
     objects.append(ps)
@@ -315,8 +328,9 @@ for fileName in fileNames:
 
             if firstResult == 'Valid':
                 break
-            if firstResult == 'True':
-                continue
+            # Lasciare per cercare di espandersi al massimo in una direzione prima di provare a cambiare direzione
+            #if firstResult == 'True':
+            #    continue
 
             if directions[1] == 'right':
                 secondResult = ps.goRight(True)
@@ -327,11 +341,10 @@ for fileName in fileNames:
                 print("downResult {}".format(secondResult))
             if secondResult == 'Valid':
                 break
-            if secondResult == 'True':
-               continue
+            #if secondResult == 'True':
+            #   continue
 
             if firstResult == 'False' and secondResult == 'False':  # Questa slice non funziona
-
                 ps.findNextSliceStart(1)
                 break
 
@@ -339,7 +352,11 @@ for fileName in fileNames:
 
     outFile.write("{}\n".format(len(ps.slices)))
     for slice in ps.slices:
-        outFile.write("{} {} {} {}\n".format(slice[0], slice[1], slice[2], slice[3]))
+        r1 = slice[0] if not flipRows else R - 1 - slice[0]
+        r2 = slice[2] if not flipRows else R - 1 - slice[2]
+        c1 = slice[1] if not flipColumns else C - 1 - slice[1]
+        c2 = slice[3] if not flipColumns else C - 1 - slice[3]
+        outFile.write("{} {} {} {}\n".format(r1, c1, r2, c2))
 
     inFile.close()
     outFile.close()
