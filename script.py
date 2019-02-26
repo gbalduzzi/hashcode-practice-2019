@@ -42,12 +42,15 @@ class PizzaSlicing:
             for j in range(c0, cFinal + 1):
                 self.pizza[i][j] = 'X'
 
+    def actualSlice(self):
+        return [self.r, self.c, self.r + self.height - 1, self.c + self.width - 1, self.countT, self.countM]
+
     def appendActualSlice(self):
         if debug:
             print("Appending slice r:{} c:{} w:{} h:{}".format(self.r, self.c, self.width, self.height))
         self.score += self.width * self.height
 
-        self.slices.append([self.r, self.c, self.r + self.height - 1, self.c + self.width - 1, self.countT, self.countM])
+        self.slices.append(self.actualSlice())
         self.setSliceUsed(self.r, self.c, self.r + self.height - 1, self.c + self.width - 1)
 
     def updateSlice(self, slice):
@@ -66,9 +69,9 @@ class PizzaSlicing:
         slice[5] = self.countM
 
     def findNextSliceStart(self, offset):
-        if directions[0] == 'right':
+        if rightDown:
             self.findNextSliceAtRight(offset)
-        elif directions[0] == 'down':
+        else:
             self.findNextSliceAtDown(offset)
 
     def findNextSliceAtDown(self, offset):
@@ -143,18 +146,38 @@ class PizzaSlicing:
                     self.updateSlice(slice)
                 break
 
+    def smallestSliceFromPoint(self):
+        smallestSlice = None
+        smallestArea = 100000
+
+        goingRight = True
+
+        while True:
+            if goingRight:
+                rightResult = self.goRight(False)
+                if rightResult == "Valid":
+                    if self.width * self.height < smallestArea:
+                        smallestSlice = self.actualSlice()
+                        smallestArea = self.width * self.height
+                    goingRight = False
+                elif rightResult == "False":
+                    goingRight = True
+                else:
+                    continue
+
+
     def goRight(self, append=True):
         canGoRight = (self.width + 1) * self.height <= H and self.c + self.width < self.C
         addedT = 0
         addedM = 0
         if canGoRight:
             for i in range(self.r, self.r + self.height):
-                if pizza[i][self.c + self.width] == 'X':
+                if self.pizza[i][self.c + self.width] == 'X':
                     canGoRight = False
 
-                if pizza[i][self.c + self.width] == 'M':
+                if self.pizza[i][self.c + self.width] == 'M':
                     addedM += 1
-                if pizza[i][self.c + self.width] == 'T':
+                if self.pizza[i][self.c + self.width] == 'T':
                     addedT += 1
 
         if canGoRight:
@@ -165,11 +188,29 @@ class PizzaSlicing:
             if self.isActualSliceValid():
                 if append:
                     self.appendActualSlice()
-                    self.findNextSliceStart(self.width if directions[0] == 'right' else self.height)
+                    self.findNextSliceStart(self.width if rightDown else self.height)
                 return "Valid"
 
             return "True"
         return "False"
+
+    def reduceRight(self):
+        if self.width <= 1:
+            return
+
+        reducedT = 0
+        reducedM = 0
+
+        for i in range(self.r, self.r + self.height):
+            if self.pizza[i][self.c + self.width - 1] == 'M':
+                reducedM += 1
+            if self.pizza[i][self.c + self.width - 1] == 'T':
+                reducedT += 1
+
+        self.countM += -reducedM
+        self.countT += -reducedT
+        self.width = self.width - 1
+
 
     def goLeft(self, append=True):
         canGoLeft = (self.width + 1) * self.height <= H and self.c - 1 >= 0
@@ -177,12 +218,12 @@ class PizzaSlicing:
         addedM = 0
         if canGoLeft:
             for i in range(self.r, self.r + self.height):
-                if pizza[i][self.c - 1] == 'X':
+                if self.pizza[i][self.c - 1] == 'X':
                     canGoLeft = False
 
-                if pizza[i][self.c - 1] == 'M':
+                if self.pizza[i][self.c - 1] == 'M':
                     addedM += 1
-                if pizza[i][self.c - 1] == 'T':
+                if self.pizza[i][self.c - 1] == 'T':
                     addedT += 1
 
         if canGoLeft:
@@ -206,12 +247,12 @@ class PizzaSlicing:
         addedM = 0
         if canGoDown:
             for i in range(self.c, self.c + self.width):
-                if pizza[self.r + self.height][i] == 'X':
+                if self.pizza[self.r + self.height][i] == 'X':
                     canGoDown = False
 
-                if pizza[self.r + self.height][i] == 'M':
+                if self.pizza[self.r + self.height][i] == 'M':
                     addedM += 1
-                if pizza[self.r + self.height][i] == 'T':
+                if self.pizza[self.r + self.height][i] == 'T':
                     addedT += 1
 
         if canGoDown:
@@ -222,11 +263,28 @@ class PizzaSlicing:
             if self.isActualSliceValid():
                 if append:
                     self.appendActualSlice()
-                    self.findNextSliceStart(self.width if directions[0] == 'right' else self.height)
+                    self.findNextSliceStart(self.width if rightDown else self.height)
                 return "Valid"
 
             return "True"
         return "False"
+
+    def reduceDown(self):
+        if self.height <= 1:
+            return
+
+        reducedT = 0
+        reducedM = 0
+
+        for i in range(self.c, self.c + self.width):
+            if self.pizza[self.r + self.height - 1][i] == 'M':
+                reducedM += 1
+            if self.pizza[self.r + self.height - 1][i] == 'T':
+                reducedT += 1
+
+        self.countM += -reducedM
+        self.countT += -reducedT
+        self.height = self.height - 1
 
     def goUp(self, append=True):
         canGoUp = self.width * (self.height+1) <= self.H and self.r > 0
@@ -234,12 +292,12 @@ class PizzaSlicing:
         addedM = 0
         if canGoUp:
             for i in range(self.c, self.c + self.width):
-                if pizza[self.r - 1][i] == 'X':
+                if self.pizza[self.r - 1][i] == 'X':
                     canGoUp = False
 
-                if pizza[self.r - 1][i] == 'M':
+                if self.pizza[self.r - 1][i] == 'M':
                     addedM += 1
-                if pizza[self.r - 1][i] == 'T':
+                if self.pizza[self.r - 1][i] == 'T':
                     addedT += 1
 
         if canGoUp:
@@ -263,13 +321,13 @@ fileNames = ['a', 'b', 'c', 'd']
 objects = []
 
 debug = False
-directions = ['down', 'right']
+rightDown = True  # False for downRight
 
 # Inverto righe e colonne in fase di lettura e di scrittura
 # basta implementare l'algoritmo nelle direzioni right e down e flippare quando servono top e left per avere
 # tutte le direzioni
 flipRows = True
-flipColumns = True
+flipColumns = False
 
 for fileName in fileNames:
     print("--- START FILE {} ---".format(fileName))
@@ -314,39 +372,50 @@ for fileName in fileNames:
             ps.countT += 1
 
         # Itero fino a quando non trovo una fetta
+        jumpFirst = False
         while True:
             if debug:
                 print("internal w:{} h:{}".format(ps.width, ps.height))
 
-            if directions[0] == 'right':
-                firstResult = ps.goRight(True)
-            elif directions[0] == 'down':
-                firstResult = ps.goDown(True)
+            # Non mi espando più nella direzione principale se ho finito di espandermi in quella direzione
+            if not jumpFirst:
+                if rightDown:
+                    firstResult = ps.goRight(True)
+                else:
+                    firstResult = ps.goDown(True)
 
-            if debug:
-                print("firstResult {}".format(firstResult))
+                if debug:
+                    print("firstResult {}".format(firstResult))
 
-            if firstResult == 'Valid':
-                break
-            # Lasciare per cercare di espandersi al massimo in una direzione prima di provare a cambiare direzione
-            #if firstResult == 'True':
-            #    continue
+                if firstResult == 'Valid':
+                    break
+            else:
+                firstResult = "False"
 
-            if directions[1] == 'right':
+            if not rightDown:
                 secondResult = ps.goRight(True)
-            elif directions[1] == 'down':
+            else:
                 secondResult = ps.goDown(True)
 
             if debug:
                 print("downResult {}".format(secondResult))
             if secondResult == 'Valid':
                 break
-            #if secondResult == 'True':
-            #   continue
 
-            if firstResult == 'False' and secondResult == 'False':  # Questa slice non funziona
-                ps.findNextSliceStart(1)
-                break
+            if firstResult == 'False' and secondResult == 'False':
+                # Controllo se posso ridurre la dimensione principale
+                if rightDown and ps.width > 1:
+                    ps.reduceRight()
+                    jumpFirst = True
+                    continue
+                elif not rightDown and ps.height > 1:
+                    ps.reduceDown()
+                    jumpFirst = True
+                    continue
+                else:
+                    ps.findNextSliceStart(1)
+                    break
+            jumpFirst = False
 
     ps.expandSlices()
 
